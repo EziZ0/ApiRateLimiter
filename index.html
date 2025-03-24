@@ -44,6 +44,11 @@
       transition: all 0.3s ease;
     }
 
+    button.loading {
+      cursor: not-allowed;
+      opacity: 0.7;
+    }
+
     button:hover { transform: translateY(-3px); background: #007bff; }
     button:active { transform: translateY(1px); }
 
@@ -79,14 +84,14 @@
     <h1>API RATE LIMITER</h1>
     <p>Please choose a method to generate an API key and access it:</p>
     
-    <button onclick="generateApiKey(5, 'page1.html')">Generate API Key without LOGIN (5 requests/min)</button>
-    <button onclick="showLoginForm()">Generate API Key with LOGIN (10 requests/min)</button>
+    <button id="btn-no-login" onclick="handleButtonClick(() => generateApiKey(5, 'page1.html'), 'btn-no-login')">Generate API Key without LOGIN (5 requests/min)</button>
+    <button id="btn-login" onclick="showLoginForm()">Generate API Key with LOGIN (10 requests/min)</button>
 
     <div class="form-container" id="login-form">
       <h2>Login</h2>
       <input type="text" id="login-email" placeholder="Username" required />
       <input type="password" id="login-password" placeholder="Password" required />
-      <button onclick="login()">Login</button>
+      <button id="btn-login-submit" onclick="handleButtonClick(login, 'btn-login-submit')">Login</button>
       <div class="toggle-btn" onclick="toggleForm()">Don't have an account? Register</div>
     </div>
 
@@ -94,12 +99,22 @@
       <h2>Register</h2>
       <input type="email" id="register-email" placeholder="Username" required />
       <input type="password" id="register-password" placeholder="Password" required />
-      <button onclick="register()">Register</button>
+      <button id="btn-register" onclick="handleButtonClick(register, 'btn-register')">Register</button>
       <div class="toggle-btn" onclick="toggleForm()">Already have an account? Login</div>
     </div>
   </div>
 
   <script>
+    function handleButtonClick(action, buttonId) {
+      const button = document.getElementById(buttonId);
+      button.classList.add('loading');
+      button.textContent = 'Processing...';
+      action().finally(() => {
+        button.classList.remove('loading');
+        button.textContent = button.getAttribute('original-text') || button.textContent;
+      });
+    }
+
     function showLoginForm() {
       document.getElementById('login-form').style.display = 'block';
     }
@@ -118,54 +133,42 @@
     }
 
     async function generateApiKey(requestLimit, page) {
-      try {
-        const response = await fetch(`https://apiratelimiter.onrender.com/generate?requestLimit=${requestLimit}`);
-        if (!response.ok) throw new Error('Failed to generate API key');
-        const apiKey = await response.text();
-        alert('API Key Generated(copy the key): ' + apiKey);
-        window.location.href = `${page}?apiKey=${encodeURIComponent(apiKey)}`;
-      } catch (error) {
-        alert('Error: ' + error);
-      }
+      const response = await fetch(`https://apiratelimiter.onrender.com/generate?requestLimit=${requestLimit}`);
+      if (!response.ok) throw new Error('Failed to generate API key');
+      const apiKey = await response.text();
+      alert('API Key Generated: ' + apiKey);
+      window.location.href = `${page}?apiKey=${encodeURIComponent(apiKey)}`;
     }
 
     async function login() {
       const email = document.getElementById('login-email').value;
       const password = document.getElementById('login-password').value;
 
-      try {
-        const response = await fetch('https://apiratelimiter.onrender.com/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username: email, password })
-        });
+      const response = await fetch('https://apiratelimiter.onrender.com/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: email, password })
+      });
 
-        if (!response.ok) throw new Error('Login failed');
-        const result = await response.json();
-        alert(result.message || 'Login successful!');
-        generateApiKey(10, 'page2.html');
-      } catch (error) {
-        alert(error.message);
-      }
+      if (!response.ok) throw new Error('Login failed');
+      const result = await response.json();
+      alert(result.message || 'Login successful!');
+      generateApiKey(10, 'page2.html');
     }
 
     async function register() {
       const username = document.getElementById('register-email').value;
       const password = document.getElementById('register-password').value;
 
-      try {
-        const response = await fetch('https://apiratelimiter.onrender.com/register', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, password })
-        });
+      const response = await fetch('https://apiratelimiter.onrender.com/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
 
-        const result = await response.json();
-        alert(result.message || 'Registration successful!');
-        if (response.ok) toggleForm();
-      } catch (error) {
-        alert(error.message);
-      }
+      const result = await response.json();
+      alert(result.message || 'Registration successful!');
+      if (response.ok) toggleForm();
     }
   </script>
 </body>
